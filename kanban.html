@@ -344,7 +344,8 @@ const SB_URL = 'https://ixpvcpmwebcwjjcbssfo.supabase.co';
 const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml4cHZjcG13ZWJjd2pqY2Jzc2ZvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYwMTI4ODQsImV4cCI6MjA5MTU4ODg4NH0.fyDz-uxM-AVK8G9lW2kjchCubifr1ySjugjp9yvKtEg';
 const SB_H  = { 'apikey': SB_KEY, 'Authorization': 'Bearer ' + SB_KEY, 'Content-Type': 'application/json' };
 const COLUNAS = ['Aguardando análise','Em análise — Comercial','Em análise — Compras','Em análise — PCP','Aprovado','Reprovado'];
-const ADMIN = new URLSearchParams(window.location.search).get('modo') === 'admin';
+const ADMIN   = new URLSearchParams(window.location.search).get('modo') === 'admin';
+const EMAIL_FUNC = 'https://ixpvcpmwebcwjjcbssfo.supabase.co/functions/v1/enviar-email-antecipacao';
 
 let dados = [], produtosMap = {}, cardAtual = null, novoStatus = null, dragProtocolo = null;
 
@@ -500,6 +501,16 @@ async function salvarMovimentacao() {
     if (idx!==-1) Object.assign(dados[idx],patch);
     fecharModalBtn(); renderBoard();
     showToast('Card movido para "'+novoStatus+'"','success');
+
+    // Dispara e-mail se status final (Aprovado ou Reprovado)
+    if (novoStatus === 'Aprovado' || novoStatus === 'Reprovado') {
+      const parecer = document.getElementById('parecer-input')?.value?.trim() || '';
+      fetch(EMAIL_FUNC, {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json', 'apikey': SB_KEY },
+        body: JSON.stringify({ protocolo: cardAtual.protocolo, status: novoStatus, parecer })
+      }).catch(e => console.warn('Email error:', e));
+    }
   } catch(e) { showToast('Erro ao salvar: '+e.message,'error'); }
   finally { document.getElementById('btn-salvar-modal').textContent='Confirmar movimentação'; document.getElementById('btn-salvar-modal').disabled=false; }
 }
