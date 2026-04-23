@@ -123,6 +123,39 @@
   .btn.primary { background:var(--blue-mid); color:#fff; border-color:var(--blue-mid); }
   .btn.primary:hover { background:var(--blue-dark); }
 
+  /* ── PARECERES POR SETOR ── */
+  .pareceres-wrap { display: flex; flex-direction: column; gap: 10px; margin-bottom: 4px; }
+  .parecer-bloco { border-radius: var(--radius-sm); overflow: hidden; border: 1px solid; }
+  .parecer-bloco-header { display: flex; align-items: center; justify-content: space-between; padding: 8px 12px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; }
+  .parecer-bloco-body { padding: 10px 12px; font-size: 13px; line-height: 1.5; }
+  .parecer-bloco-body textarea { width: 100%; border: none; background: transparent; font-size: 13px; font-family: var(--font); resize: vertical; min-height: 60px; outline: none; line-height: 1.5; }
+  .parecer-edit-btn { font-size: 11px; font-weight: 600; padding: 3px 10px; border-radius: 4px; cursor: pointer; border: 1px solid; background: transparent; transition: all .15s; }
+  .parecer-save-btn { font-size: 11px; font-weight: 600; padding: 3px 10px; border-radius: 4px; cursor: pointer; border: none; transition: all .15s; }
+
+  /* Comercial — azul */
+  .parecer-comercial { border-color: #2E6DA4; }
+  .parecer-comercial .parecer-bloco-header { background: #D6E4F0; color: #1A3A5C; }
+  .parecer-comercial .parecer-bloco-body { background: #EAF2FA; color: #1A3A5C; }
+  .parecer-comercial .parecer-bloco-body textarea { color: #1A3A5C; }
+  .parecer-comercial .parecer-edit-btn { color: #2E6DA4; border-color: #2E6DA4; }
+  .parecer-comercial .parecer-save-btn { background: #2E6DA4; color: #fff; }
+
+  /* Compras — roxo */
+  .parecer-compras { border-color: #5A4E7A; }
+  .parecer-compras .parecer-bloco-header { background: #EAE6F5; color: #3D2F6A; }
+  .parecer-compras .parecer-bloco-body { background: #F2EFF9; color: #3D2F6A; }
+  .parecer-compras .parecer-bloco-body textarea { color: #3D2F6A; }
+  .parecer-compras .parecer-edit-btn { color: #5A4E7A; border-color: #5A4E7A; }
+  .parecer-compras .parecer-save-btn { background: #5A4E7A; color: #fff; }
+
+  /* PCP — âmbar */
+  .parecer-pcp { border-color: #7A6030; }
+  .parecer-pcp .parecer-bloco-header { background: #F5EDD6; color: #5A4010; }
+  .parecer-pcp .parecer-bloco-body { background: #FAF3E0; color: #5A4010; }
+  .parecer-pcp .parecer-bloco-body textarea { color: #5A4010; }
+  .parecer-pcp .parecer-edit-btn { color: #7A6030; border-color: #7A6030; }
+  .parecer-pcp .parecer-save-btn { background: #7A6030; color: #fff; }
+
   /* ── LOADING / EMPTY ── */
   .empty-col { text-align:center; padding:20px 10px; color:var(--gray-500); font-size:12px; }
   .loading-wrap { display:flex; align-items:center; justify-content:center; height:200px; gap:10px; color:var(--gray-500); font-size:14px; }
@@ -458,11 +491,33 @@ function renderModal() {
       <div class="prod-list">${prods.length?prods.map(p=>`<div class="prod-item"><span>${p.produto}</span><span>${p.prazo}d — Qtd ${p.qtd}</span></div>`).join(''):'<div class="prod-item">—</div>'}</div>
     </div>
     <div class="modal-section"><h4>Status atual</h4>
-      <div class="status-track">${pill(s.status_geral)}
-        ${s.parecer_comercial?`<span style="font-size:11px;color:var(--gray-500)">Comercial: ${s.parecer_comercial}</span>`:''}
-        ${s.parecer_pcp?`<span style="font-size:11px;color:var(--gray-500)">PCP: ${s.parecer_pcp}</span>`:''}
-        ${s.parecer_compras?`<span style="font-size:11px;color:var(--gray-500)">Compras: ${s.parecer_compras}</span>`:''}
-      </div>
+      <div class="status-track" style="margin-bottom:12px">${pill(s.status_geral)}</div>
+      ${(s.parecer_comercial||s.parecer_compras||s.parecer_pcp) ? `<div class="pareceres-wrap">
+        ${s.parecer_comercial ? `
+        <div class="parecer-bloco parecer-comercial" id="bloco-comercial">
+          <div class="parecer-bloco-header">
+            <span>Comercial</span>
+            ${ADMIN ? `<button class="parecer-edit-btn" onclick="editarParecer('comercial')">Editar</button>` : ''}
+          </div>
+          <div class="parecer-bloco-body" id="body-comercial">${s.parecer_comercial}</div>
+        </div>` : ''}
+        ${s.parecer_compras ? `
+        <div class="parecer-bloco parecer-compras" id="bloco-compras">
+          <div class="parecer-bloco-header">
+            <span>Compras</span>
+            ${ADMIN ? `<button class="parecer-edit-btn" onclick="editarParecer('compras')">Editar</button>` : ''}
+          </div>
+          <div class="parecer-bloco-body" id="body-compras">${s.parecer_compras}</div>
+        </div>` : ''}
+        ${s.parecer_pcp ? `
+        <div class="parecer-bloco parecer-pcp" id="bloco-pcp">
+          <div class="parecer-bloco-header">
+            <span>PCP</span>
+            ${ADMIN ? `<button class="parecer-edit-btn" onclick="editarParecer('pcp')">Editar</button>` : ''}
+          </div>
+          <div class="parecer-bloco-body" id="body-pcp">${s.parecer_pcp}</div>
+        </div>` : ''}
+      </div>` : ''}
     </div>
     ${ADMIN?`<div class="move-section"><h4>Mover para</h4>
       <div class="move-cols">${colBtns}</div>
@@ -503,6 +558,60 @@ async function salvarMovimentacao() {
 
   } catch(e) { showToast('Erro ao salvar: '+e.message,'error'); }
   finally { document.getElementById('btn-salvar-modal').textContent='Confirmar movimentação'; document.getElementById('btn-salvar-modal').disabled=false; }
+}
+
+function editarParecer(setor) {
+  const bodyEl = document.getElementById('body-' + setor);
+  const blocoEl = document.getElementById('bloco-' + setor);
+  const textoAtual = bodyEl.textContent.trim();
+  const corSave = setor==='comercial'?'#2E6DA4':setor==='compras'?'#5A4E7A':'#7A6030';
+
+  bodyEl.innerHTML = `
+    <textarea id="edit-${setor}" style="width:100%;border:none;background:transparent;font-size:13px;font-family:inherit;resize:vertical;min-height:60px;outline:none;line-height:1.5">${textoAtual}</textarea>
+    <div style="display:flex;gap:8px;margin-top:8px;justify-content:flex-end">
+      <button onclick="cancelarEdicaoParecer('${setor}','${textoAtual.replace(/'/g,"&#39;")}')" style="font-size:11px;font-weight:600;padding:3px 10px;border-radius:4px;cursor:pointer;border:1px solid #ccc;background:transparent">Cancelar</button>
+      <button class="parecer-save-btn" onclick="salvarParecer('${setor}')" style="background:${corSave};color:#fff;font-size:11px;font-weight:600;padding:3px 10px;border-radius:4px;cursor:pointer;border:none">Salvar</button>
+    </div>`;
+
+  // Troca botão Editar por nada enquanto edita
+  const editBtn = blocoEl.querySelector('.parecer-edit-btn');
+  if (editBtn) editBtn.style.display = 'none';
+}
+
+function cancelarEdicaoParecer(setor, textoOriginal) {
+  document.getElementById('body-' + setor).textContent = textoOriginal;
+  const editBtn = document.getElementById('bloco-' + setor)?.querySelector('.parecer-edit-btn');
+  if (editBtn) editBtn.style.display = '';
+}
+
+async function salvarParecer(setor) {
+  const novoTexto = document.getElementById('edit-' + setor)?.value?.trim() || '';
+  if (!novoTexto) return;
+
+  const patch = { ['parecer_' + setor]: novoTexto };
+  try {
+    const res = await fetch(SB_URL + '/rest/v1/solicitacoes?protocolo=eq.' + cardAtual.protocolo, {
+      method: 'PATCH',
+      headers: { ...SB_H, 'Prefer': 'return=minimal' },
+      body: JSON.stringify(patch)
+    });
+    if (!res.ok) throw new Error(await res.text());
+
+    // Atualiza local
+    const idx = dados.findIndex(s => s.protocolo === cardAtual.protocolo);
+    if (idx !== -1) dados[idx]['parecer_' + setor] = novoTexto;
+    cardAtual['parecer_' + setor] = novoTexto;
+
+    // Atualiza visual
+    const bodyEl = document.getElementById('body-' + setor);
+    bodyEl.textContent = novoTexto;
+    const editBtn = document.getElementById('bloco-' + setor)?.querySelector('.parecer-edit-btn');
+    if (editBtn) editBtn.style.display = '';
+
+    showToast('Parecer atualizado', 'success');
+  } catch(e) {
+    showToast('Erro ao salvar parecer', 'error');
+  }
 }
 
 function fecharModal(e) { if(e.target===document.getElementById('modal-bg')) fecharModalBtn(); }
