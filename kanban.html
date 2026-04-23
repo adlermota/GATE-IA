@@ -507,8 +507,15 @@ async function salvarMovimentacao() {
       const parecer = document.getElementById('parecer-input')?.value?.trim() || '';
       fetch(EMAIL_FUNC, {
         method:  'POST',
-        headers: { 'Content-Type': 'application/json', 'apikey': SB_KEY },
+        headers: {
+          'Content-Type':  'application/json',
+          'apikey':        SB_KEY,
+          'Authorization': 'Bearer ' + SB_KEY
+        },
         body: JSON.stringify({ protocolo: cardAtual.protocolo, status: novoStatus, parecer })
+      }).then(r => r.json()).then(d => {
+        console.log('Email response:', d);
+        if (d.ok) showToast('E-mail enviado ao representante', 'success');
       }).catch(e => console.warn('Email error:', e));
     }
   } catch(e) { showToast('Erro ao salvar: '+e.message,'error'); }
