@@ -345,7 +345,6 @@ const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJ
 const SB_H  = { 'apikey': SB_KEY, 'Authorization': 'Bearer ' + SB_KEY, 'Content-Type': 'application/json' };
 const COLUNAS = ['Aguardando análise','Em análise — Comercial','Em análise — Compras','Em análise — PCP','Aprovado','Reprovado'];
 const ADMIN   = new URLSearchParams(window.location.search).get('modo') === 'admin';
-const EMAIL_FUNC = 'https://ixpvcpmwebcwjjcbssfo.supabase.co/functions/v1/resend-email';
 
 let dados = [], produtosMap = {}, cardAtual = null, novoStatus = null, dragProtocolo = null;
 
@@ -500,24 +499,8 @@ async function salvarMovimentacao() {
     const idx=dados.findIndex(s=>s.protocolo===cardAtual.protocolo);
     if (idx!==-1) Object.assign(dados[idx],patch);
     fecharModalBtn(); renderBoard();
-    showToast('Card movido para "'+novoStatus+'"','success');
+    if (novoStatus) showToast('Movido para: '+novoStatus, 'success');
 
-    // Dispara e-mail se status final (Aprovado ou Reprovado)
-    if (novoStatus === 'Aprovado' || novoStatus === 'Reprovado') {
-      const parecer = document.getElementById('parecer-input')?.value?.trim() || '';
-      fetch(EMAIL_FUNC, {
-        method:  'POST',
-        headers: {
-          'Content-Type':  'application/json',
-          'apikey':        SB_KEY,
-          'Authorization': 'Bearer ' + SB_KEY
-        },
-        body: JSON.stringify({ protocolo: cardAtual.protocolo, status: novoStatus, parecer })
-      }).then(r => r.json()).then(d => {
-        console.log('Email response:', d);
-        if (d.ok) showToast('E-mail enviado ao representante', 'success');
-      }).catch(e => console.warn('Email error:', e));
-    }
   } catch(e) { showToast('Erro ao salvar: '+e.message,'error'); }
   finally { document.getElementById('btn-salvar-modal').textContent='Confirmar movimentação'; document.getElementById('btn-salvar-modal').disabled=false; }
 }
