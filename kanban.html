@@ -345,7 +345,7 @@ const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJ
 const SB_H  = { 'apikey': SB_KEY, 'Authorization': 'Bearer ' + SB_KEY, 'Content-Type': 'application/json' };
 const COLUNAS = ['Aguardando análise','Em análise — Comercial','Em análise — Compras','Em análise — PCP','Aprovado','Reprovado'];
 const ADMIN   = new URLSearchParams(window.location.search).get('modo') === 'admin';
-const EMAIL_FUNC = 'https://ixpvcpmwebcwjjcbssfo.supabase.co/functions/v1/enviar-email-antecipacao';
+const EMAIL_FUNC = 'https://ixpvcpmwebcwjjcbssfo.supabase.co/functions/v1/resend-email';
 
 let dados = [], produtosMap = {}, cardAtual = null, novoStatus = null, dragProtocolo = null;
 
