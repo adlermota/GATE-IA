@@ -457,6 +457,14 @@ function renderBoard() {
   });
 }
 
+function fmtISO(val) {
+  // Converte YYYY-MM-DD para DD/MM/YYYY
+  if (!val) return '—';
+  const p = String(val).split('-');
+  if (p.length === 3) return `${p[2]}/${p[1]}/${p[0]}`;
+  return val;
+}
+
 function fmtDataBR(iso) {
   if (!iso) return '—';
   // Suporta ISO completo (com T) ou só data
@@ -486,7 +494,9 @@ function renderCard(s) {
   const prodTxt = prods.length === 0 ? '—' : prods.length === 1 ? prods[0].produto : prods[0].produto+' +'+(prods.length-1);
   const antec = s.dias_antecipacao ? s.dias_antecipacao+'d antecipação' : '';
   const isReprovado = s.status_geral === 'Reprovado';
-  const melhorData = isReprovado ? calcMelhorData(s.data_emissao, s.prazo_maximo) : null;
+  const melhorData = isReprovado
+    ? (s.melhor_data ? fmtISO(s.melhor_data) : calcMelhorData(s.data_emissao, s.prazo_maximo))
+    : null;
   const dataFormatada = fmtDataBR(s.created_at || s.data_registro);
   return `<div class="card" draggable="${ADMIN}"
     ${ADMIN ? `ondragstart="onDragStart(event,'${s.protocolo}')" ondragend="onDragEnd(event)"` : ''}
@@ -549,8 +559,8 @@ function renderModal() {
       <div class="modal-grid">
         <div class="modal-field"><span>Representante</span><b>${s.representante||'—'}</b></div>
         <div class="modal-field"><span>Pedido</span><b>${s.pedido||'—'}</b></div>
-        <div class="modal-field"><span>Data emissão</span><b>${s.data_emissao||'—'}</b></div>
-        <div class="modal-field"><span>Data solicitada</span><b>${s.data_solicitada||'—'}</b></div>
+        <div class="modal-field"><span>Data emissão</span><b>${fmtISO(s.data_emissao)}</b></div>
+        <div class="modal-field"><span>Data solicitada</span><b>${fmtISO(s.data_solicitada)}</b></div>
         <div class="modal-field"><span>Prazo máximo</span><b>${s.prazo_maximo||'—'} dias</b></div>
         <div class="modal-field"><span>Antecipação</span><b>${s.dias_antecipacao||'—'} dias</b></div>
         <div class="modal-field"><span>Urgência</span><b>${s.urgencia||'—'}</b></div>
@@ -576,13 +586,18 @@ function renderModal() {
           <button class="setor-btn" data-setor="pcp"       onclick="selecionarSetorParecer(this)">PCP</button>
         </div>
         <textarea id="novo-parecer-txt" placeholder="Escreva o comentário do setor selecionado..."></textarea>
+        <div style="display:flex;justify-content:flex-end;margin-top:8px">
+          <button class="btn primary" style="padding:7px 18px;font-size:12px" onclick="salvarNovoComentario()">Salvar comentário</button>
+        </div>
       </div>` : ''}
     </div>
     ${ADMIN?`<div class="move-section"><h4>Mover para</h4>
       <div class="move-cols">${colBtns}</div>
       <div id="motivo-reprova-wrap" style="display:none" class="motivo-reprova-wrap">
         <label>⚠️ Motivo da reprovação (obrigatório)</label>
-        <textarea id="motivo-reprova-input" placeholder="Descreva o motivo da reprovação..."></textarea>
+        <textarea id="motivo-reprova-input" placeholder="Descreva o motivo da reprovação..." style="margin-bottom:10px"></textarea>
+        <label style="margin-top:8px">📅 Melhor data possível (obrigatório)</label>
+        <input type="date" id="melhor-data-input" style="width:100%;border:1px solid #f09595;border-radius:6px;padding:8px;font-size:13px;font-family:inherit;background:#fff;outline:none;margin-top:4px" />
       </div>
       <div class="parecer-area" id="parecer-area" style="display:none">
         <label>Parecer / observação</label>
@@ -611,13 +626,20 @@ async function salvarMovimentacao() {
   if (!novoStatus||!cardAtual) return;
   if (novoStatus===(cardAtual.status_geral||'Aguardando análise')) { fecharModalBtn(); return; }
 
-  // Valida motivo obrigatório ao reprovar
+  // Valida motivo e melhor data obrigatórios ao reprovar
   if (novoStatus === 'Reprovado') {
-    const motivo = (document.getElementById('motivo-reprova-input')?.value||'').trim();
+    const motivo     = (document.getElementById('motivo-reprova-input')?.value||'').trim();
+    const melhorData = (document.getElementById('melhor-data-input')?.value||'').trim();
     if (!motivo) {
       document.getElementById('motivo-reprova-input').style.borderColor = '#8C3A3A';
       document.getElementById('motivo-reprova-input').focus();
       showToast('Informe o motivo da reprovação', 'error');
+      return;
+    }
+    if (!melhorData) {
+      document.getElementById('melhor-data-input').style.borderColor = '#8C3A3A';
+      document.getElementById('melhor-data-input').focus();
+      showToast('Informe a melhor data possível', 'error');
       return;
     }
   }
@@ -631,9 +653,13 @@ async function salvarMovimentacao() {
   const parecer = novoStatus === 'Reprovado'
     ? (document.getElementById('motivo-reprova-input')?.value||'').trim()
     : (document.getElementById('parecer-input')?.value||'').trim();
+  const melhorDataVal = novoStatus === 'Reprovado'
+    ? (document.getElementById('melhor-data-input')?.value||'').trim()
+    : null;
 
   const patch = { status_geral: novoStatus };
   if (novoStatus==='Aprovado'||novoStatus==='Reprovado') { patch.status_final=novoStatus; patch.data_conclusao=agora; }
+  if (melhorDataVal) patch.melhor_data = melhorDataVal;
   if (setor) { patch['data_'+setor]=agora; }
   if (setor && parecer) { patch['parecer_'+setor]=parecer; }
 
@@ -705,6 +731,42 @@ async function salvarParecer(setor) {
   } catch(e) {
     showToast('Erro ao salvar parecer', 'error');
   }
+}
+
+async function salvarNovoComentario() {
+  const txt    = (document.getElementById('novo-parecer-txt')?.value||'').trim();
+  const setor  = document.querySelector('.setor-btn.ativo')?.dataset?.setor || null;
+  if (!txt)   { showToast('Escreva o comentário antes de salvar', 'error'); return; }
+  if (!setor) { showToast('Selecione o setor do comentário', 'error'); return; }
+
+  const patch = { ['parecer_'+setor]: txt, ['data_'+setor]: new Date().toISOString() };
+  try {
+    const res = await fetch(SB_URL+'/rest/v1/solicitacoes?protocolo=eq.'+cardAtual.protocolo, {
+      method: 'PATCH', headers: {...SB_H,'Prefer':'return=minimal'}, body: JSON.stringify(patch)
+    });
+    if (!res.ok) throw new Error(await res.text());
+
+    // Atualiza local e re-renderiza modal sem fechar
+    const idx = dados.findIndex(s=>s.protocolo===cardAtual.protocolo);
+    if (idx !== -1) Object.assign(dados[idx], patch);
+    Object.assign(cardAtual, patch);
+
+    // Limpa campo
+    document.getElementById('novo-parecer-txt').value = '';
+    document.querySelectorAll('.setor-btn').forEach(b=>b.classList.remove('ativo'));
+
+    // Atualiza a lista de pareceres no modal sem fechar
+    const wrap = document.getElementById('pareceres-wrap');
+    if (wrap) {
+      wrap.innerHTML =
+        renderBlocoParecer(cardAtual,'comercial','Comercial') +
+        renderBlocoParecer(cardAtual,'compras','Compras') +
+        renderBlocoParecer(cardAtual,'pcp','PCP') +
+        (!cardAtual.parecer_comercial&&!cardAtual.parecer_compras&&!cardAtual.parecer_pcp
+          ? '<div style="font-size:12px;color:var(--gray-500)">Nenhum comentário ainda.</div>' : '');
+    }
+    showToast('Comentário salvo', 'success');
+  } catch(e) { showToast('Erro ao salvar: '+e.message, 'error'); }
 }
 
 async function deletarParecer(setor) {
