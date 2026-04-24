@@ -201,6 +201,30 @@
   .legend-item { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--gray-700); }
   .legend-dot { width: 12px; height: 12px; border-radius: 50%; flex-shrink: 0; }
   @media (max-width: 700px) { .dash-grid { grid-template-columns: 1fr; } .bar-label { width: 100px; } }
+
+  /* ── MELHOR DATA NO CARD ── */
+  .tag-melhor-data { background: #E8F4E8; color: #2E6B2E; font-size: 10px; font-weight: 600; padding: 2px 7px; border-radius: 8px; margin-top: 4px; display: inline-block; }
+
+  /* ── PARECER NOVO (qualquer coluna) ── */
+  .novo-parecer-wrap { margin-top: 12px; }
+  .novo-parecer-wrap label { font-size: 12px; color: var(--gray-500); display: block; margin-bottom: 4px; font-weight: 500; }
+  .novo-parecer-wrap textarea { width: 100%; border: 1px solid var(--gray-200); border-radius: var(--radius-sm); padding: 8px; font-size: 13px; font-family: var(--font); resize: vertical; min-height: 60px; outline: none; }
+  .novo-parecer-wrap textarea:focus { border-color: var(--blue-mid); }
+  .novo-parecer-wrap .setor-sel { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 8px; }
+  .setor-btn { padding: 5px 12px; font-size: 11px; font-weight: 700; border-radius: 4px; cursor: pointer; border: 1.5px solid; background: transparent; transition: all .15s; }
+  .setor-btn[data-setor="comercial"]       { color: #1A3A5C; border-color: #2E6DA4; }
+  .setor-btn[data-setor="comercial"].ativo { background: #D6E4F0; }
+  .setor-btn[data-setor="compras"]         { color: #3D2F6A; border-color: #5A4E7A; }
+  .setor-btn[data-setor="compras"].ativo   { background: #EAE6F5; }
+  .setor-btn[data-setor="pcp"]             { color: #5A4010; border-color: #7A6030; }
+  .setor-btn[data-setor="pcp"].ativo       { background: #F5EDD6; }
+  .parecer-del-btn { font-size: 11px; color: #8C3A3A; border: 1px solid #f09595; background: transparent; border-radius: 4px; padding: 3px 8px; cursor: pointer; transition: all .15s; }
+  .parecer-del-btn:hover { background: #F2DEDE; }
+
+  /* ── REPROVADO — campo obrigatório ── */
+  .motivo-reprova-wrap { margin-top: 10px; background: #F2DEDE; border: 1px solid #f09595; border-radius: var(--radius-sm); padding: 12px; }
+  .motivo-reprova-wrap label { font-size: 12px; font-weight: 600; color: #8C3A3A; display: block; margin-bottom: 6px; }
+  .motivo-reprova-wrap textarea { width: 100%; border: 1px solid #f09595; border-radius: var(--radius-sm); padding: 8px; font-size: 13px; font-family: var(--font); resize: vertical; min-height: 60px; outline: none; background: #fff; }
 </style>
 </head>
 <body>
@@ -433,14 +457,40 @@ function renderBoard() {
   });
 }
 
+function fmtDataBR(iso) {
+  if (!iso) return '—';
+  // Suporta ISO completo (com T) ou só data
+  const d = new Date(iso.includes('T') ? iso : iso + 'T00:00:00');
+  if (isNaN(d)) return iso;
+  const dia  = String(d.getDate()).padStart(2,'0');
+  const mes  = String(d.getMonth()+1).padStart(2,'0');
+  const ano  = d.getFullYear();
+  const hora = String(d.getHours()).padStart(2,'0');
+  const min  = String(d.getMinutes()).padStart(2,'0');
+  return `${dia}/${mes}/${ano} ${hora}:${min}`;
+}
+
+function calcMelhorData(emissao, prazoMax) {
+  // Melhor data = entrega prevista original (prazo padrão a partir da emissão)
+  if (!emissao || !prazoMax) return null;
+  const partes = emissao.split('-');
+  if (partes.length !== 3) return null;
+  const d = new Date(Number(partes[0]), Number(partes[1])-1, Number(partes[2]));
+  d.setDate(d.getDate() + Number(prazoMax));
+  return `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${d.getFullYear()}`;
+}
+
 function renderCard(s) {
   const urgClass = 'tag-urg-'+(s.urgencia||'Baixa');
   const prods = produtosMap[s.protocolo] || [];
   const prodTxt = prods.length === 0 ? '—' : prods.length === 1 ? prods[0].produto : prods[0].produto+' +'+(prods.length-1);
   const antec = s.dias_antecipacao ? s.dias_antecipacao+'d antecipação' : '';
+  const isReprovado = s.status_geral === 'Reprovado';
+  const melhorData = isReprovado ? calcMelhorData(s.data_emissao, s.prazo_maximo) : null;
+  const dataFormatada = fmtDataBR(s.created_at || s.data_registro);
   return `<div class="card" draggable="${ADMIN}"
     ${ADMIN ? `ondragstart="onDragStart(event,'${s.protocolo}')" ondragend="onDragEnd(event)"` : ''}
-    onclick="abrirModal('${s.protocolo}')" style="${ADMIN?'':'cursor:default'}">
+    onclick="abrirModal('${s.protocolo}')" style="${ADMIN?'':'cursor:default'}${isReprovado?';border-left:3px solid #8C3A3A':''}">
     <div class="card-prot">${s.protocolo}</div>
     <div class="card-rep">${s.representante||'—'}</div>
     <div class="card-pedido">Pedido: ${s.pedido||'—'}</div>
@@ -449,9 +499,10 @@ function renderCard(s) {
       ${s.prazo_maximo ? `<span class="tag tag-prazo">${s.prazo_maximo}d prazo</span>` : ''}
       ${antec ? `<span class="tag tag-antec">${antec}</span>` : ''}
     </div>
-    <div class="card-prods">${prodTxt}</div>
+    ${melhorData ? `<div><span class="tag-melhor-data">📅 Melhor data: ${melhorData}</span></div>` : ''}
+    <div class="card-prods" style="margin-top:6px">${prodTxt}</div>
     <div class="card-footer">
-      <span class="card-data">${s.data_registro||''}</span>
+      <span class="card-data">${dataFormatada}</span>
       ${ADMIN ? `<button class="card-move-btn" onclick="event.stopPropagation();abrirModal('${s.protocolo}')">Mover →</button>` : ''}
     </div>
   </div>`;
@@ -466,6 +517,26 @@ function onDrop(e, status) { if(!ADMIN) return; e.preventDefault(); document.que
 // ── MODAL ─────────────────────────────────────────────────────────────────────
 function abrirModal(protocolo) { cardAtual=dados.find(s=>s.protocolo===protocolo); novoStatus=null; if(!cardAtual) return; renderModal(); document.getElementById('modal-bg').classList.add('open'); }
 function abrirModalComStatus(protocolo, status) { cardAtual=dados.find(s=>s.protocolo===protocolo); novoStatus=status; if(!cardAtual) return; renderModal(); document.getElementById('modal-bg').classList.add('open'); }
+
+function renderBlocoParecer(s, setor, label) {
+  const texto = s['parecer_'+setor];
+  if (!texto) return '';
+  return `<div class="parecer-bloco parecer-${setor}" id="bloco-${setor}">
+    <div class="parecer-bloco-header">
+      <span>${label}</span>
+      ${ADMIN ? `<div style="display:flex;gap:6px">
+        <button class="parecer-edit-btn" onclick="editarParecer('${setor}')">Editar</button>
+        <button class="parecer-del-btn"  onclick="deletarParecer('${setor}')">✕</button>
+      </div>` : ''}
+    </div>
+    <div class="parecer-bloco-body" id="body-${setor}">${texto}</div>
+  </div>`;
+}
+
+function selecionarSetorParecer(btn) {
+  document.querySelectorAll('.setor-btn').forEach(b => b.classList.remove('ativo'));
+  btn.classList.add('ativo');
+}
 
 function renderModal() {
   const s = cardAtual;
@@ -490,40 +561,32 @@ function renderModal() {
     <div class="modal-section"><h4>Produtos (${prods.length})</h4>
       <div class="prod-list">${prods.length?prods.map(p=>`<div class="prod-item"><span>${p.produto}</span><span>${p.prazo}d — Qtd ${p.qtd}</span></div>`).join(''):'<div class="prod-item">—</div>'}</div>
     </div>
-    <div class="modal-section"><h4>Status atual</h4>
-      <div class="status-track" style="margin-bottom:12px">${pill(s.status_geral)}</div>
-      ${(s.parecer_comercial||s.parecer_compras||s.parecer_pcp) ? `<div class="pareceres-wrap">
-        ${s.parecer_comercial ? `
-        <div class="parecer-bloco parecer-comercial" id="bloco-comercial">
-          <div class="parecer-bloco-header">
-            <span>Comercial</span>
-            ${ADMIN ? `<button class="parecer-edit-btn" onclick="editarParecer('comercial')">Editar</button>` : ''}
-          </div>
-          <div class="parecer-bloco-body" id="body-comercial">${s.parecer_comercial}</div>
-        </div>` : ''}
-        ${s.parecer_compras ? `
-        <div class="parecer-bloco parecer-compras" id="bloco-compras">
-          <div class="parecer-bloco-header">
-            <span>Compras</span>
-            ${ADMIN ? `<button class="parecer-edit-btn" onclick="editarParecer('compras')">Editar</button>` : ''}
-          </div>
-          <div class="parecer-bloco-body" id="body-compras">${s.parecer_compras}</div>
-        </div>` : ''}
-        ${s.parecer_pcp ? `
-        <div class="parecer-bloco parecer-pcp" id="bloco-pcp">
-          <div class="parecer-bloco-header">
-            <span>PCP</span>
-            ${ADMIN ? `<button class="parecer-edit-btn" onclick="editarParecer('pcp')">Editar</button>` : ''}
-          </div>
-          <div class="parecer-bloco-body" id="body-pcp">${s.parecer_pcp}</div>
-        </div>` : ''}
+    <div class="modal-section"><h4>Comentários por setor</h4>
+      <div class="pareceres-wrap" id="pareceres-wrap">
+        ${renderBlocoParecer(s,'comercial','Comercial')}
+        ${renderBlocoParecer(s,'compras','Compras')}
+        ${renderBlocoParecer(s,'pcp','PCP')}
+        ${(!s.parecer_comercial&&!s.parecer_compras&&!s.parecer_pcp) ? '<div style="font-size:12px;color:var(--gray-500)">Nenhum comentário ainda.</div>' : ''}
+      </div>
+      ${ADMIN ? `<div class="novo-parecer-wrap">
+        <label>Adicionar comentário</label>
+        <div class="setor-sel">
+          <button class="setor-btn" data-setor="comercial" onclick="selecionarSetorParecer(this)">Comercial</button>
+          <button class="setor-btn" data-setor="compras"   onclick="selecionarSetorParecer(this)">Compras</button>
+          <button class="setor-btn" data-setor="pcp"       onclick="selecionarSetorParecer(this)">PCP</button>
+        </div>
+        <textarea id="novo-parecer-txt" placeholder="Escreva o comentário do setor selecionado..."></textarea>
       </div>` : ''}
     </div>
     ${ADMIN?`<div class="move-section"><h4>Mover para</h4>
       <div class="move-cols">${colBtns}</div>
-      <div class="parecer-area" id="parecer-area" style="${novoStatus?'':'display:none'}">
-        <label>Parecer / observação (opcional)</label>
-        <textarea id="parecer-input" placeholder="Descreva o resultado da análise..."></textarea>
+      <div id="motivo-reprova-wrap" style="display:none" class="motivo-reprova-wrap">
+        <label>⚠️ Motivo da reprovação (obrigatório)</label>
+        <textarea id="motivo-reprova-input" placeholder="Descreva o motivo da reprovação..."></textarea>
+      </div>
+      <div class="parecer-area" id="parecer-area" style="display:none">
+        <label>Parecer / observação</label>
+        <textarea id="parecer-input" placeholder="Observação adicional (opcional)..."></textarea>
       </div>
     </div>`:''}`;
   if (ADMIN) document.getElementById('btn-salvar-modal').style.display = '';
@@ -533,19 +596,50 @@ function selecionarStatus(status) {
   novoStatus = status;
   document.querySelectorAll('.move-col-btn').forEach(b=>b.classList.remove('current'));
   event.target.classList.add('current');
-  document.getElementById('parecer-area').style.display='block';
+  const motivoWrap = document.getElementById('motivo-reprova-wrap');
+  const parecerArea = document.getElementById('parecer-area');
+  if (status === 'Reprovado') {
+    motivoWrap.style.display = 'block';
+    parecerArea.style.display = 'none';
+  } else {
+    motivoWrap.style.display = 'none';
+    parecerArea.style.display = 'block';
+  }
 }
 
 async function salvarMovimentacao() {
   if (!novoStatus||!cardAtual) return;
   if (novoStatus===(cardAtual.status_geral||'Aguardando análise')) { fecharModalBtn(); return; }
-  const parecer=(document.getElementById('parecer-input')?.value||'').trim();
-  const agora=new Date().toISOString();
-  const setor=novoStatus.includes('Comercial')?'comercial':novoStatus.includes('PCP')?'pcp':novoStatus.includes('Compras')?'compras':null;
-  const patch={status_geral:novoStatus};
+
+  // Valida motivo obrigatório ao reprovar
+  if (novoStatus === 'Reprovado') {
+    const motivo = (document.getElementById('motivo-reprova-input')?.value||'').trim();
+    if (!motivo) {
+      document.getElementById('motivo-reprova-input').style.borderColor = '#8C3A3A';
+      document.getElementById('motivo-reprova-input').focus();
+      showToast('Informe o motivo da reprovação', 'error');
+      return;
+    }
+  }
+
+  // Salva novo parecer por setor se houver
+  const novoParecer = (document.getElementById('novo-parecer-txt')?.value||'').trim();
+  const setorAtivo  = document.querySelector('.setor-btn.ativo')?.dataset?.setor || null;
+
+  const agora = new Date().toISOString();
+  const setor = novoStatus.includes('Comercial')?'comercial':novoStatus.includes('PCP')?'pcp':novoStatus.includes('Compras')?'compras':null;
+  const parecer = novoStatus === 'Reprovado'
+    ? (document.getElementById('motivo-reprova-input')?.value||'').trim()
+    : (document.getElementById('parecer-input')?.value||'').trim();
+
+  const patch = { status_geral: novoStatus };
   if (novoStatus==='Aprovado'||novoStatus==='Reprovado') { patch.status_final=novoStatus; patch.data_conclusao=agora; }
-  if (setor&&parecer) { patch['parecer_'+setor]=parecer; patch['data_'+setor]=agora; }
-  if (setor&&!parecer) { patch['data_'+setor]=agora; }
+  if (setor) { patch['data_'+setor]=agora; }
+  if (setor && parecer) { patch['parecer_'+setor]=parecer; }
+
+  // Adiciona novo comentário de setor explicitamente selecionado
+  if (novoParecer && setorAtivo) { patch['parecer_'+setorAtivo]=novoParecer; patch['data_'+setorAtivo]=agora; }
+
   document.getElementById('btn-salvar-modal').textContent='Salvando...';
   document.getElementById('btn-salvar-modal').disabled=true;
   try {
@@ -555,7 +649,6 @@ async function salvarMovimentacao() {
     if (idx!==-1) Object.assign(dados[idx],patch);
     fecharModalBtn(); renderBoard();
     if (novoStatus) showToast('Movido para: '+novoStatus, 'success');
-
   } catch(e) { showToast('Erro ao salvar: '+e.message,'error'); }
   finally { document.getElementById('btn-salvar-modal').textContent='Confirmar movimentação'; document.getElementById('btn-salvar-modal').disabled=false; }
 }
@@ -612,6 +705,23 @@ async function salvarParecer(setor) {
   } catch(e) {
     showToast('Erro ao salvar parecer', 'error');
   }
+}
+
+async function deletarParecer(setor) {
+  if (!confirm('Remover comentário do setor ' + setor + '?')) return;
+  const patch = { ['parecer_'+setor]: '' };
+  try {
+    const res = await fetch(SB_URL+'/rest/v1/solicitacoes?protocolo=eq.'+cardAtual.protocolo, {
+      method: 'PATCH', headers: {...SB_H,'Prefer':'return=minimal'}, body: JSON.stringify(patch)
+    });
+    if (!res.ok) throw new Error(await res.text());
+    const idx = dados.findIndex(s=>s.protocolo===cardAtual.protocolo);
+    if (idx!==-1) dados[idx]['parecer_'+setor]='';
+    cardAtual['parecer_'+setor]='';
+    // Remove bloco do DOM
+    document.getElementById('bloco-'+setor)?.remove();
+    showToast('Comentário removido', 'success');
+  } catch(e) { showToast('Erro ao remover: '+e.message,'error'); }
 }
 
 function fecharModal(e) { if(e.target===document.getElementById('modal-bg')) fecharModalBtn(); }
