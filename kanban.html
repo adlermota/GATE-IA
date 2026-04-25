@@ -662,13 +662,13 @@ function renderModal() {
     </div>
     ${ADMIN?`<div class="move-section"><h4>Mover para</h4>
       <div class="move-cols">${colBtns}</div>
-      <div id="motivo-reprova-wrap" style="display:none" class="motivo-reprova-wrap">
+      <div id="motivo-reprova-wrap" style="${novoStatus==='Reprovado'?'':'display:none'}" class="motivo-reprova-wrap">
         <label>⚠️ Motivo da reprovação (obrigatório)</label>
         <textarea id="motivo-reprova-input" placeholder="Descreva o motivo da reprovação..." style="margin-bottom:10px"></textarea>
         <label style="margin-top:8px">📅 Melhor data possível (obrigatório)</label>
         <input type="date" id="melhor-data-input" style="width:100%;border:1px solid #f09595;border-radius:6px;padding:8px;font-size:13px;font-family:inherit;background:#fff;outline:none;margin-top:4px" />
       </div>
-      <div class="parecer-area" id="parecer-area" style="display:none">
+      <div class="parecer-area" id="parecer-area" style="${novoStatus&&novoStatus!=='Reprovado'?'':'display:none'}">
         <label>Parecer / observação</label>
         <textarea id="parecer-input" placeholder="Observação adicional (opcional)..."></textarea>
       </div>
@@ -680,14 +680,22 @@ function selecionarStatus(status) {
   novoStatus = status;
   document.querySelectorAll('.move-col-btn').forEach(b=>b.classList.remove('current'));
   event.target.classList.add('current');
-  const motivoWrap = document.getElementById('motivo-reprova-wrap');
+  exibirCamposStatus(status);
+}
+
+function exibirCamposStatus(status) {
+  const motivoWrap  = document.getElementById('motivo-reprova-wrap');
   const parecerArea = document.getElementById('parecer-area');
+  if (!motivoWrap || !parecerArea) return;
   if (status === 'Reprovado') {
-    motivoWrap.style.display = 'block';
+    motivoWrap.style.display  = 'block';
     parecerArea.style.display = 'none';
-  } else {
-    motivoWrap.style.display = 'none';
+  } else if (status) {
+    motivoWrap.style.display  = 'none';
     parecerArea.style.display = 'block';
+  } else {
+    motivoWrap.style.display  = 'none';
+    parecerArea.style.display = 'none';
   }
 }
 
