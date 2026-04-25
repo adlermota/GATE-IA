@@ -561,9 +561,9 @@ function renderCard(s) {
   const horasExcedentes = Math.floor(horas48 - 48);
   const horas48txt    = alerta48 ? `⏰ ${horasExcedentes}h em atraso` : '';
 
-  // Motivo reprovação: exibe no card o parecer do setor que reprovou
+  // Motivo reprovação: usa campo dedicado ou fallback para pareceres
   const motivoReprovaTxt = isReprovado
-    ? (s.parecer_pcp || s.parecer_compras || s.parecer_comercial || '')
+    ? (s.motivo_reprovacao || s.parecer_pcp || s.parecer_compras || s.parecer_comercial || '')
     : '';
 
   return `<div class="card${alerta48?' alerta-48h':''}" draggable="${ADMIN}"
@@ -738,8 +738,9 @@ async function salvarMovimentacao() {
   const patch = { status_geral: novoStatus };
   if (novoStatus==='Aprovado'||novoStatus==='Reprovado') { patch.status_final=novoStatus; patch.data_conclusao=agora; }
   if (melhorDataVal) patch.melhor_data = melhorDataVal;
+  if (novoStatus==='Reprovado' && parecer) patch.motivo_reprovacao = parecer;
   if (setor) { patch['data_'+setor]=agora; }
-  if (setor && parecer) { patch['parecer_'+setor]=parecer; }
+  if (setor && parecer && novoStatus!=='Reprovado') { patch['parecer_'+setor]=parecer; }
 
   // Adiciona novo comentário de setor explicitamente selecionado
   if (novoParecer && setorAtivo) { patch['parecer_'+setorAtivo]=novoParecer; patch['data_'+setorAtivo]=agora; }
