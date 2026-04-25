@@ -506,40 +506,57 @@ function calcMelhorData(emissao, prazoMax) {
 }
 
 function horasUteisDecorridas(dataEmissaoISO) {
-  // Retorna quantas horas úteis (seg-sex) se passaram desde a data de emissão
   if (!dataEmissaoISO) return 0;
-  const partes = dataEmissaoISO.split('-');
+  const partes = String(dataEmissaoISO).split('-');
   if (partes.length !== 3) return 0;
 
-  // Início: data de emissão às 08:00
-  const inicio = new Date(Number(partes[0]), Number(partes[1])-1, Number(partes[2]), 8, 0, 0);
+  // Garante que a data de início é interpretada no horário local (sem UTC shift)
+  // Início: dia da emissão às 08:00 no horário local
+  const ano = Number(partes[0]), mes = Number(partes[1]) - 1, dia = Number(partes[2]);
+  const inicio = new Date(ano, mes, dia, 8, 0, 0, 0);
   const agora  = new Date();
 
   if (agora <= inicio) return 0;
 
-  // Conta horas úteis entre início e agora
-  // Jornada útil: 08:00 às 18:00 (10h/dia), seg a sex
-  let horasUteis = 0;
-  const cur = new Date(inicio);
+  // Acumula apenas minutos dentro da jornada útil (seg–sex, 08h–18h)
+  let minutosUteis = 0;
+  const cur = new Date(inicio.getTime());
 
   while (cur < agora) {
-    const diaSemana = cur.getDay(); // 0=dom, 6=sab
-    if (diaSemana !== 0 && diaSemana !== 6) {
-      const hora = cur.getHours();
-      if (hora >= 8 && hora < 18) {
-        // Avança 1 hora de cada vez (suficiente para precisão)
-        const proxHora = new Date(cur);
-        proxHora.setHours(proxHora.getHours() + 1);
-        const fim = proxHora < agora ? proxHora : agora;
-        horasUteis += (fim - cur) / 3600000;
+    const dow  = cur.getDay();     // 0=dom, 6=sab
+    const hora = cur.getHours();
+    const min  = cur.getMinutes();
+
+    if (dow >= 1 && dow <= 5 && hora >= 8 && hora < 18) {
+      // Próximo limite: fim da hora atual ou 18h ou agora, o que vier primeiro
+      const fimHora   = new Date(cur.getFullYear(), cur.getMonth(), cur.getDate(), hora + 1, 0, 0, 0);
+      const fim18     = new Date(cur.getFullYear(), cur.getMonth(), cur.getDate(), 18, 0, 0, 0);
+      const limite    = new Date(Math.min(fimHora, fim18, agora));
+      minutosUteis   += (limite - cur) / 60000;
+      cur.setTime(limite.getTime());
+    } else {
+      // Avança para o próximo bloco útil
+      if (dow === 0 || dow === 6) {
+        // Fim de semana — pula para segunda 08h
+        const diasAteSegunda = dow === 0 ? 1 : 2;
+        cur.setDate(cur.getDate() + diasAteSegunda);
+        cur.setHours(8, 0, 0, 0);
+      } else if (hora < 8) {
+        // Antes da jornada
+        cur.setHours(8, 0, 0, 0);
+      } else {
+        // Após 18h — pula para próximo dia útil 08h
+        cur.setDate(cur.getDate() + 1);
+        cur.setHours(8, 0, 0, 0);
+        // Se caiu no fim de semana, avança
+        while (cur.getDay() === 0 || cur.getDay() === 6) {
+          cur.setDate(cur.getDate() + 1);
+        }
       }
     }
-    // Avança para a próxima hora
-    cur.setHours(cur.getHours() + 1);
-    cur.setMinutes(0); cur.setSeconds(0); cur.setMilliseconds(0);
   }
 
-  return Math.round(horasUteis * 10) / 10;
+  return Math.round((minutosUteis / 60) * 10) / 10;
 }
 
 function renderCard(s) {
