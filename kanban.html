@@ -155,23 +155,7 @@
   .parecer-pcp .parecer-bloco-body textarea { color: #5A4010; }
   .parecer-pcp .parecer-edit-btn { color: #7A6030; border-color: #7A6030; }
   .parecer-pcp .parecer-save-btn { background: #7A6030; color: #fff; }
-
-  /* ── ALERTA 48H ÚTEIS ── */
-  .card.alerta-48h { border-left: 4px solid #C0392B !important; background: #fffafa; }
-  .card.alerta-48h .card-prot { color: #C0392B; }
-  .alerta-48h-badge {
-    display: inline-flex; align-items: center; gap: 4px;
-    background: #FCEBEB; color: #8C3A3A; border: 1px solid #f09595;
-    font-size: 10px; font-weight: 700; padding: 2px 8px;
-    border-radius: 8px; margin-bottom: 6px;
-  }
   /* ── MOTIVO REPROVAÇÃO NO CARD ── */
-  .card-motivo-reprova {
-    font-size: 11px; color: #8C3A3A; background: #F2DEDE;
-    border: 1px solid #f09595; border-radius: 6px;
-    padding: 5px 9px; margin-top: 7px; line-height: 1.4;
-  }
-  .card-motivo-reprova b { display: block; font-size: 10px; text-transform: uppercase; letter-spacing:.04em; margin-bottom:2px; }
 
   /* ── LOADING / EMPTY ── */
   .empty-col { text-align:center; padding:20px 10px; color:var(--gray-500); font-size:12px; }
@@ -505,59 +489,6 @@ function calcMelhorData(emissao, prazoMax) {
   return `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${d.getFullYear()}`;
 }
 
-function horasUteisDecorridas(dataEmissaoISO) {
-  if (!dataEmissaoISO) return 0;
-  const partes = String(dataEmissaoISO).split('-');
-  if (partes.length !== 3) return 0;
-
-  // Garante que a data de início é interpretada no horário local (sem UTC shift)
-  // Início: dia da emissão às 08:00 no horário local
-  const ano = Number(partes[0]), mes = Number(partes[1]) - 1, dia = Number(partes[2]);
-  const inicio = new Date(ano, mes, dia, 8, 0, 0, 0);
-  const agora  = new Date();
-
-  if (agora <= inicio) return 0;
-
-  // Acumula apenas minutos dentro da jornada útil (seg–sex, 08h–18h)
-  let minutosUteis = 0;
-  const cur = new Date(inicio.getTime());
-
-  while (cur < agora) {
-    const dow  = cur.getDay();     // 0=dom, 6=sab
-    const hora = cur.getHours();
-    const min  = cur.getMinutes();
-
-    if (dow >= 1 && dow <= 5 && hora >= 8 && hora < 18) {
-      // Próximo limite: fim da hora atual ou 18h ou agora, o que vier primeiro
-      const fimHora   = new Date(cur.getFullYear(), cur.getMonth(), cur.getDate(), hora + 1, 0, 0, 0);
-      const fim18     = new Date(cur.getFullYear(), cur.getMonth(), cur.getDate(), 18, 0, 0, 0);
-      const limite    = new Date(Math.min(fimHora, fim18, agora));
-      minutosUteis   += (limite - cur) / 60000;
-      cur.setTime(limite.getTime());
-    } else {
-      // Avança para o próximo bloco útil
-      if (dow === 0 || dow === 6) {
-        // Fim de semana — pula para segunda 08h
-        const diasAteSegunda = dow === 0 ? 1 : 2;
-        cur.setDate(cur.getDate() + diasAteSegunda);
-        cur.setHours(8, 0, 0, 0);
-      } else if (hora < 8) {
-        // Antes da jornada
-        cur.setHours(8, 0, 0, 0);
-      } else {
-        // Após 18h — pula para próximo dia útil 08h
-        cur.setDate(cur.getDate() + 1);
-        cur.setHours(8, 0, 0, 0);
-        // Se caiu no fim de semana, avança
-        while (cur.getDay() === 0 || cur.getDay() === 6) {
-          cur.setDate(cur.getDate() + 1);
-        }
-      }
-    }
-  }
-
-  return Math.round((minutosUteis / 60) * 10) / 10;
-}
 
 function renderCard(s) {
   const urgClass = 'tag-urg-'+(s.urgencia||'Baixa');
@@ -571,22 +502,14 @@ function renderCard(s) {
     : null;
   const dataFormatada = fmtDataBR(s.created_at || s.data_registro);
 
-  // Alerta 48h úteis — APENAS cards em andamento (não aprovado/reprovado)
-  const emAndamento   = !isConcluido && s.status_geral !== 'Aguardando análise' || s.status_geral === 'Aguardando análise';
-  const horas48       = !isConcluido ? horasUteisDecorridas(s.data_emissao) : 0;
-  const alerta48      = horas48 > 48;
-  const horasExcedentes = Math.floor(horas48 - 48);
-  const horas48txt    = alerta48 ? `⏰ ${horasExcedentes}h em atraso` : '';
-
   // Motivo reprovação: usa campo dedicado ou fallback para pareceres
   const motivoReprovaTxt = isReprovado
     ? (s.motivo_reprovacao || s.parecer_pcp || s.parecer_compras || s.parecer_comercial || '')
     : '';
 
-  return `<div class="card${alerta48?' alerta-48h':''}" draggable="${ADMIN}"
+  return `<div class="card" draggable="${ADMIN}"
     ${ADMIN ? `ondragstart="onDragStart(event,'${s.protocolo}')" ondragend="onDragEnd(event)"` : ''}
     onclick="abrirModal('${s.protocolo}')" style="${ADMIN?'':'cursor:default'}">
-    ${alerta48 ? `<div class="alerta-48h-badge">${horas48txt}</div>` : ''}
     <div class="card-prot">${s.protocolo}</div>
     <div class="card-rep">${s.representante||'—'}</div>
     <div class="card-pedido">Pedido: ${s.pedido||'—'}</div>
