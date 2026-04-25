@@ -558,7 +558,8 @@ function renderCard(s) {
   const emAndamento   = !isConcluido && s.status_geral !== 'Aguardando análise' || s.status_geral === 'Aguardando análise';
   const horas48       = !isConcluido ? horasUteisDecorridas(s.data_emissao) : 0;
   const alerta48      = horas48 > 48;
-  const horas48txt    = alerta48 ? `⏰ ${Math.floor(horas48)}h úteis em atraso` : '';
+  const horasExcedentes = Math.floor(horas48 - 48);
+  const horas48txt    = alerta48 ? `⏰ ${horasExcedentes}h em atraso` : '';
 
   // Motivo reprovação: exibe no card o parecer do setor que reprovou
   const motivoReprovaTxt = isReprovado
