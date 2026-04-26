@@ -519,7 +519,10 @@ function renderCard(s) {
       ${antec ? `<span class="tag tag-antec">${antec}</span>` : ''}
     </div>
     ${melhorData ? `<div style="margin-top:5px"><span class="tag-melhor-data">📅 Melhor data: ${melhorData}</span></div>` : ''}
-    ${motivoReprovaTxt ? `<div class="card-motivo-reprova"><b>Motivo da reprovação</b>${motivoReprovaTxt}</div>` : ''}
+    ${motivoReprovaTxt ? `<div class="card-motivo-reprova">
+      <span class="reprova-label">❌ Motivo da reprovação</span>
+      <span class="reprova-texto">${motivoReprovaTxt}</span>
+    </div>` : ''}
     <div class="card-prods" style="margin-top:6px">${prodTxt}</div>
     <div class="card-footer">
       <span class="card-data">${dataFormatada}</span>
