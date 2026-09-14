@@ -451,13 +451,14 @@ function mudarAba(aba, btn) {
   if (aba === 'dashboard') renderDashboard();
 }
 
-// ── CARREGAR DADOS ────────────────────────────────────────────────────────────
+// ── CARREGAR DADOS ─
+ try {
     renderBoard();
     if (document.getElementById('tab-dashboard').classList.contains('active')) renderDashboard();
   } catch(e) {
     document.getElementById('loading-wrap').innerHTML = '<span style="color:#A32D2D">Erro ao carregar dados.</span>';
   }
-}
+
 
 // ── RENDER BOARD ──────────────────────────────────────────────────────────────
 function renderBoard() {
